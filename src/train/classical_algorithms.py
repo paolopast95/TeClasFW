@@ -9,6 +9,7 @@ import pandas as pd
 from src.preprocessing.stemming import Stemmer
 from src.preprocessing.tokenization import Tokenizer
 from src.preprocessing.stopword_removal import StopwordRemoval
+from src.preprocessing.sentence_embedding import Vectorizer
 from tqdm import tqdm
 
 class ClassicalTrainer:
@@ -125,14 +126,13 @@ tokenizer = Tokenizer("wordpunct", True)
 X = tokenizer.fit(X)
 stopword = StopwordRemoval("english")
 X = stopword.fit(X)
-stemmer = Stemmer("english", "porter")
+stemmer = Stemmer("english", "wordnet")
 X = stemmer.fit(X)
-Tfidf_vect = TfidfVectorizer(tokenizer=identity_tokenizer, lowercase=False, stop_words=None, max_features=5000)
-Tfidf_vect.fit(X)
-X_Tfidf = Tfidf_vect.transform(X)
-#trainer = ClassicalTrainer("svm", {'kernels':['linear', 'rbf'], 'gammas':['auto'], 'Cs':[0.1, 0.01, 1], 'degrees':[2]}, "accuracy")
-trainer = ClassicalTrainer("decision_tree", {'criteria':['gini', 'entropy'], 'splitters':['random', 'best'], 'max_depths':[10,100,1000, None], 'min_samples_splits':[2,3,4], 'min_samples_leaves':[1,2,3]}, "accuracy")
-trainer.compute_best_params_cv(X_Tfidf, y, 5)
+vectorizer = Vectorizer("word2vec", "word2vec-google-news-300")
+X = vectorizer.fit(X)
+trainer = ClassicalTrainer("svm", {'kernels':['rbf'], 'gammas':['auto'], 'Cs':[0.1, 0.01, 1], 'degrees':[2]}, "accuracy")
+#trainer = ClassicalTrainer("decision_tree", {'criteria':['gini', 'entropy'], 'splitters':['random', 'best'], 'max_depths':[10,100,1000, None], 'min_samples_splits':[2,3,4], 'min_samples_leaves':[1,2,3]}, "accuracy")
+trainer.compute_best_params(X, y, 5)
 print(trainer.best_accuracy)
 print(trainer.best_model)
 

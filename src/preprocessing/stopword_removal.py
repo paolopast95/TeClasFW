@@ -1,7 +1,9 @@
+import nltk
 from nltk.corpus import stopwords
 
 class StopwordRemoval():
     def __init__(self, language):
+        nltk.download("stopwords")
         self.language = language
         self.stopwords = stopwords.words(language)
 

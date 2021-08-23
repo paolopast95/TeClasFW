@@ -1,8 +1,10 @@
 from nltk.stem import PorterStemmer, LancasterStemmer, WordNetLemmatizer
 from nltk.stem.snowball import ItalianStemmer, FrenchStemmer, SpanishStemmer, EnglishStemmer
+import nltk
 
 class Stemmer():
     def __init__(self, language='english', stemmer_name='porter'):
+        nltk.download("wordnet")
         self.stemmer_name = stemmer_name
         self.language = language
         if language != "english" and stemmer_name != 'snowball':
