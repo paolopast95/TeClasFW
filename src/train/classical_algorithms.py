@@ -12,7 +12,7 @@ from src.preprocessing.stopword_removal import StopwordRemoval
 from src.preprocessing.sentence_embedding import Vectorizer
 from tqdm import tqdm
 
-class ClassicalTrainer:
+class ClassicalTrainer():
     def __init__(self, model_name, params_dict, metric):
         self.model_name = model_name
         self.params_dict = params_dict
@@ -117,8 +117,7 @@ class ClassicalTrainer:
 
 
 
-def identity_tokenizer(txt):
-    return txt
+
 data = pd.read_csv("../../data/clickbait_data.csv", sep="\t", header=None)
 X = data[0]
 y = data[1]

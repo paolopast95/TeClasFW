@@ -5,7 +5,7 @@ import pickle
 import os
 import numpy as np
 
-class Vectorizer:
+class Vectorizer():
     def __init__(self, operation_type="count", embedding_filename=None, max_features=5000):
         self.operation_type = operation_type
         self.embedding_filename = embedding_filename
