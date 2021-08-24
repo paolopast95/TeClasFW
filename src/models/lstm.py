@@ -37,29 +37,3 @@ class CustomizedLSTM(Model):
         for layer in self.denses:
             x = layer(x)
         return self.classification_layer(x)
-
-
-data = pd.read_csv("../../data/clickbait_data.csv", sep="\t", header=None)
-X = data[0]
-y = data[1]
-print(type(y[0]))
-tokenizer = Tokenizer("wordpunct", True)
-X = tokenizer.fit(X)
-stopword = StopwordRemoval("english")
-X = stopword.fit(X)
-stemmer = Stemmer("english", "wordnet")
-X = stemmer.fit(X)
-X = [" ".join(sent) for sent in X]
-tokenizer = tf.keras.preprocessing.text.Tokenizer(num_words = 5000, oov_token="OOV")
-tokenizer.fit_on_texts(X)
-word_index = tokenizer.word_index
-sequences = tokenizer.texts_to_sequences(X)
-padded = tf.keras.preprocessing.sequence.pad_sequences(sequences, maxlen=30,padding='post', truncating='post')
-encoder = LabelEncoder()
-encoder.fit(y)
-print(y[0])
-print(padded[0])
-lstm = CustomizedLSTM(num_classes=1, num_hidden_layers=3, num_recurrent_units=[256,512,256], num_dense_layers=3, num_dense_neurons=[128,64,32], vocab_size=5000)
-lstm.compile(loss="binary_crossentropy", optimizer="adam", metrics=['accuracy'])
-lstm.fit(padded,y,validation_split=0.2, epochs=10)
-print(lstm.layers)

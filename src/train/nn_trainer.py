@@ -8,17 +8,30 @@ import gensim.downloader as gensim_api
 from src.models.gru import CustomizedGRU
 from src.models.lstm import CustomizedLSTM
 from src.models.rnn import CustomizedRNN
-
 from src.models.cnn import CustomizedCNN
 
+from tensorflow.keras.optimizers import Adadelta, Adagrad, Adam, Adamax, Ftrl, Nadam, RMSprop, SGD
+optimizers = {
+    "adadelta": Adadelta,
+    "adagrad": Adagrad,
+    "adam": Adam,
+    "adamax": Adamax,
+    "ftrl": Ftrl,
+    "nadam": Nadam,
+    "rmsprop": RMSprop,
+    "sgd": SGD
+}
 class NNTrainer:
-    def __init__(self, model_name, params_dict, metric):
+    def __init__(self, model_name, params_dict, metric, optimizer, lr):
         self.model_name = model_name
         self.params_dict = params_dict
         self.metric = metric
+        self.optimizer = optimizer
+        self.lr = lr
 
     def compute_best_params(self, X_train, y_train, validation_size):
         self.best_accuracy = 0
+        learning_rate = self.lr
         X_concat = [" ".join(sentence) for sentence in X_train]
         tokenizer = tf.keras.preprocessing.text.Tokenizer(oov_token="OOV")
         tokenizer.fit_on_texts(X_concat)
@@ -38,7 +51,6 @@ class NNTrainer:
                 if word in pre_embedding_matrix:
                     embedding_vector = pre_embedding_matrix[word]
                     embedding_matrix[i] = embedding_vector
-            print(embedding_matrix.shape)
         else:
             embedding_matrix = None
         if self.model_name == "cnn":
@@ -50,7 +62,7 @@ class NNTrainer:
             num_dense_neurons = self.params_dict['num_dense_neurons']
             for ncl, ncc, df, p, ndl, ndn in itertools.product(num_conv_layers, num_conv_cells, dim_filters,pooling,num_dense_layers, num_dense_neurons):
                 cnn = CustomizedCNN(num_classes=1, num_conv_layers=ncl, num_conv_cells=ncc, dim_filter=df, pooling=p, num_dense_layers=ndl, num_dense_neurons=ndn, pretrained_embeddings=embedding_matrix, vocab_size=vocab_size)
-                cnn.compile(loss="binary_crossentropy", optimizer="adam", metrics=['accuracy'])
+                cnn.compile(loss="binary_crossentropy", optimizer=optimizers['adam'](learning_rate=learning_rate), metrics=['accuracy'])
                 cnn.fit(padded, y_train, validation_split=validation_size, epochs=10)
         else:
             num_hidden_layers = self.params_dict['num_hidden_layers']

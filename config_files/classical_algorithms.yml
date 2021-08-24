@@ -1,0 +1,32 @@
+experiment:
+  dataset_filename: "clickbait_data.csv"
+  preprocessing:
+    tokenization: "wordpunct"
+    stemming: "wordnet"
+    stopword_removal: true
+    embedding_file: "word2vec-google-news-300
+  models:
+    - svm:
+        kernels: [rbf, linear, poly]
+        gammas: [auto]
+        Cs: [0.01, 0.1, 1, 10]
+        degrees: [2, 3, 4]
+    - naive_bayes
+    - decision_tree:
+        criteria: [gini, entropy]
+        splitters: [random, best]
+        max_depths: [10,100,1000, 10000]
+        min_samples_splits: [2,3,4]
+        min_samples_leaves: [10, 100, 200]
+  evaluation:
+    k_fold:
+      k: 5
+      focus_metric: accuracy
+    validation_set:
+      test_size: 0.2
+      validation_split: 0.2
+      focus_metric: accuracy
+    metrics: [accuracy, precision, recall, f1score]
+  output:
+    output_filename: results.txt
+
