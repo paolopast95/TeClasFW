@@ -4,12 +4,11 @@ import pickle
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import TextVectorization
-import pandas as pd
+import gensim.downloader as gensim_api
+from src.models.gru import CustomizedGRU
+from src.models.lstm import CustomizedLSTM
+from src.models.rnn import CustomizedRNN
 
-from src.preprocessing.stemming import Stemmer
-from src.preprocessing.stopword_removal import StopwordRemoval
-from src.preprocessing.tokenization import Tokenizer
 from src.models.cnn import CustomizedCNN
 
 class NNTrainer:
@@ -20,16 +19,20 @@ class NNTrainer:
 
     def compute_best_params(self, X_train, y_train, validation_size):
         self.best_accuracy = 0
-        vocab_size = self.params_dict['vocab_size']
         X_concat = [" ".join(sentence) for sentence in X_train]
         tokenizer = tf.keras.preprocessing.text.Tokenizer(oov_token="OOV")
-        tokenizer.fit_on_texts(X)
+        tokenizer.fit_on_texts(X_concat)
         vocab_size = len(tokenizer.word_index) + 1
-        sequences = tokenizer.texts_to_sequences(X)
+        sequences = tokenizer.texts_to_sequences(X_concat)
         padded = tf.keras.preprocessing.sequence.pad_sequences(sequences, maxlen=30, padding='post', truncating='post')
         if "pretrained_embeddings_path" in self.params_dict:
-            with open(os.path.join("../../embeddings", self.params_dict['pretrained_embeddings_path']),"rb") as f:
-                pre_embedding_matrix = pickle.load(f)
+            if os.path.exists(os.path.join("../../embeddings/", self.params_dict['pretrained_embeddings_path'])):
+                with open(os.path.join("../../embeddings", self.params_dict['pretrained_embeddings_path']),"rb") as f:
+                    pre_embedding_matrix = pickle.load(f)
+            else:
+                nlp = gensim_api.load("word2vec-google-news-300")
+                with open(os.path.join("../../embeddings/", self.params_dict['pretrained_embeddings_path']), "wb") as f:
+                    pickle.dump(nlp, f)
             embedding_matrix = np.zeros((vocab_size, len(pre_embedding_matrix['cat'])))
             for word, i in tokenizer.word_index.items():
                 if word in pre_embedding_matrix:
@@ -49,18 +52,24 @@ class NNTrainer:
                 cnn = CustomizedCNN(num_classes=1, num_conv_layers=ncl, num_conv_cells=ncc, dim_filter=df, pooling=p, num_dense_layers=ndl, num_dense_neurons=ndn, pretrained_embeddings=embedding_matrix, vocab_size=vocab_size)
                 cnn.compile(loss="binary_crossentropy", optimizer="adam", metrics=['accuracy'])
                 cnn.fit(padded, y_train, validation_split=validation_size, epochs=10)
+        else:
+            num_hidden_layers = self.params_dict['num_hidden_layers']
+            num_recurrent_units = self.params_dict['num_recurrent_units']
+            num_dense_layers = self.params_dict['num_dense_layers']
+            num_dense_neurons = self.params_dict['num_dense_neurons']
+            is_bidirectional = self.params_dict['is_bidirectional']
+            for nhl, nru, ndl, ndn, bi in itertools.product(num_hidden_layers, num_recurrent_units, num_dense_layers, num_dense_neurons, is_bidirectional):
+                if self.model_name == "lstm":
+                    model = CustomizedLSTM(num_classes=1, num_hidden_layers=nhl, num_recurrent_units=nru,
+                                           num_dense_layers=ndl, num_dense_neurons=ndn, is_bidirectional=bi, pretrained_embeddings=embedding_matrix)
+                elif self.model_name == "rnn":
+                    model = CustomizedRNN(num_classes=1, num_hidden_layers=nhl, num_recurrent_units=nru,
+                                           num_dense_layers=ndl, num_dense_neurons=ndn, is_bidirectional=bi, pretrained_embeddings=embedding_matrix)
+                elif self.model_name == "gru":
+                    model = CustomizedGRU(num_classes=1, num_hidden_layers=nhl, num_recurrent_units=nru,
+                                           num_dense_layers=ndl, num_dense_neurons=ndn, is_bidirectional=bi, pretrained_embeddings=embedding_matrix)
+                model.compile(loss="binary_crossentropy", optimizer="adam", metrics=['accuracy'])
+                model.fit(padded, y_train, validation_split=validation_size, epochs=10)
 
-data = pd.read_csv("../../data/clickbait_data.csv", sep="\t", header=None)
-X = data[0]
-y = data[1]
-tokenizer = Tokenizer("wordpunct", True)
-X = tokenizer.fit(X)
-stopword = StopwordRemoval("english")
-X = stopword.fit(X)
-stemmer = Stemmer("english", "wordnet")
-X = stemmer.fit(X)
-trainer = NNTrainer("cnn", {'num_conv_layers':[2], 'num_conv_cells':[[128,128]], 'dim_filters':[[5,5,5]],'pooling':[[5,10]],
-                            'num_dense_layers':[2], 'num_dense_neurons':[[32,16]], 'vocab_size':10000,
-                            "pretrained_embeddings_path":"word2vec-google-news-300"}, "accuracy" )
-trainer.compute_best_params(X,y,validation_size=0.2)
+
 
