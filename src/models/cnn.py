@@ -14,19 +14,19 @@ class CustomizedCNN(Model):
         self.cnns = []
         self.maxpoolings = []
         self.denses = []
-        if pretrained_embeddings:
-            self.embedding = tf.keras.layers.Embedding(vocab_size, pretrained_embeddings.shape(0),
-                                                       embeddings_initializer=tf.keras.initializers.Constant(pretrained_embeddings),
-                                                       trainable=False)
+        if pretrained_embeddings is None:
+            self.embedding = Embedding(vocab_size, 300)
         else:
-            self.embedding = Embedding(vocab_size,300)
+            self.embedding = tf.keras.layers.Embedding(vocab_size, pretrained_embeddings.shape[1],
+                                                       weights=[pretrained_embeddings],
+                                                       trainable=False)
         for i in range(num_conv_layers):
             self.cnns.append(Conv1D(num_conv_cells[i], dim_filter[i],activation="relu", padding="same"))
             self.maxpoolings.append(MaxPooling1D(pooling[i], padding="same"))
         self.flatten = Flatten()
         for i in range(num_dense_layers):
-            self.denses.append(tf.keras.layers.Dense(num_dense_neurons[i], activation="relu"))
-        self.classification_layer = tf.keras.layers.Dense(num_classes, activation="sigmoid")
+            self.denses.append(Dense(num_dense_neurons[i], activation="relu"))
+        self.classification_layer = Dense(num_classes, activation="sigmoid")
 
     def call(self, inputs):
         x = self.embedding(inputs)
@@ -39,7 +39,7 @@ class CustomizedCNN(Model):
             x = layer(x)
         return self.classification_layer(x)
 
-
+"""
 data = pd.read_csv("../../data/clickbait_data.csv", sep="\t", header=None)
 X = data[0]
 y = data[1]
@@ -65,3 +65,4 @@ lstm = CustomizedCNN(num_classes=1, num_conv_layers=3, num_conv_cells=[128,128,1
 lstm.compile(loss="binary_crossentropy", optimizer="adam", metrics=['accuracy'])
 lstm.fit(padded,y,validation_split=0.2, epochs=10)
 print(lstm.layers)
+"""
