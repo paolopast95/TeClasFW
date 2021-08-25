@@ -63,6 +63,6 @@ print(padded[0])
 print(padded.shape)
 lstm = CustomizedCNN(num_classes=1, num_conv_layers=3, num_conv_cells=[128,128,128], dim_filter=[5,5,5], pooling=[5,5,5], num_dense_layers=3, num_dense_neurons=[128,64,32], vocab_size=5000)
 lstm.compile(loss="binary_crossentropy", optimizer="adam", metrics=['accuracy'])
-lstm.fit(padded,y,validation_split=0.2, epochs=10)
-print(lstm.layers)
+history = lstm.fit(padded,y,validation_split=0.2, epochs=10, verbose=0)
+print(history.history['val_accuracy'][9])
 """

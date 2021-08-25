@@ -1,3 +1,5 @@
+import os
+
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
@@ -13,13 +15,15 @@ from src.preprocessing.sentence_embedding import Vectorizer
 from tqdm import tqdm
 
 class ClassicalTrainer():
-    def __init__(self, model_name, params_dict, metric):
+    def __init__(self, output_folder_name, model_name, params_dict, metric):
+        self.output_folder_name = output_folder_name
         self.model_name = model_name
         self.params_dict = params_dict
         self.metric = metric
 
 
     def compute_best_params(self, X_train, y_train, validation_size):
+        output_folder = os.path.join("../../output/", self.output_folder_name)
         self.best_accuracy = 0
         X_tr, X_val, y_tr, y_val = train_test_split(X_train, y_train, test_size=validation_size)
         if self.model_name == "svm":
@@ -27,7 +31,14 @@ class ClassicalTrainer():
             gammas = self.params_dict['gammas']
             Cs = self.params_dict['Cs']
             degrees = self.params_dict['degrees']
+            results = pd.DataFrame(columns=["Kernel", "Gamma", "C", "Degree", "Accuracy"])
+            experiment_number = 0
             for kernel, gamma, C, degree in tqdm(itertools.product(kernels, gammas, Cs, degrees)):
+                print("Training and validation of SVM with the following parameters")
+                print("Kernel: " + str(kernel))
+                print("Gamma: " + str(gamma))
+                print("C: " + str(C))
+                print("Degree: " + str(degree))
                 current_svm = SVC(kernel=kernel, gamma=gamma, C=C, degree=degree)
                 current_svm.fit(X_tr, y_tr)
                 y_pred = current_svm.predict(X_val)
@@ -35,6 +46,11 @@ class ClassicalTrainer():
                 if current_accuracy > self.best_accuracy:
                     self.best_model = current_svm
                     self.best_accuracy = current_accuracy
+                print("Accuracy: " + str(current_accuracy))
+                print("-------------------------------------------------------------------------")
+                results.iloc[0] = [kernel, gamma, C, degree, current_accuracy]
+                experiment_number += 1
+            results.to_csv(os.path.join(output_folder, "svm.csv"))
         elif self.model_name == "naive_bayes":
             current_nb = MultinomialNB()
             current_nb.fit(X_tr,y_tr)
@@ -48,7 +64,15 @@ class ClassicalTrainer():
             max_depths = self.params_dict['max_depths']
             min_samples_splits = self.params_dict['min_samples_splits']
             min_samples_leaves = self.params_dict['min_samples_leaves']
+            results = pd.DataFrame(columns=["Criterion", "Splitter", "MaxDepth", "MinSampleSplit", "MinSampleLeaf", "Accuracy"])
+            experiment_number = 0
             for criterion, splitter, max_depth, min_samples_split, min_samples_leaf in itertools.product(criteria, splitters, max_depths, min_samples_splits,min_samples_leaves):
+                print("Training and validation of DecisionTree with the following parameters")
+                print("Criterion: " + str(criterion))
+                print("Splitter: " + str(splitter))
+                print("Max Depth: " + str(max_depth))
+                print("Min Sample Split: " + str(min_samples_split))
+                print("Min Sample Leaf: ", str(min_samples_leaf))
                 current_tree = DecisionTreeClassifier(criterion=criterion, splitter=splitter, max_depth=max_depth, min_samples_split=min_samples_split,min_samples_leaf=min_samples_leaf)
                 current_tree.fit(X_tr, y_tr)
                 y_pred = current_tree.predict(X_val)
@@ -56,8 +80,28 @@ class ClassicalTrainer():
                 if current_accuracy > self.best_accuracy:
                     self.best_model = current_tree
                     self.best_accuracy = current_accuracy
+                print("Accuracy: " + str(current_accuracy))
+                print("-------------------------------------------------------------------------")
+                results.iloc[experiment_number] = [criterion, splitter, max_depth, min_samples_split, min_samples_leaf, current_accuracy]
+            results.to_csv(os.path.join(output_folder, "decisionTree.csv"))
         self.best_model.fit(X_train, y_train)
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    """
     def compute_best_params_cv(self, X_train, y_train, cv=5):
         self.best_accuracy = 0
         skf = StratifiedKFold(n_splits=cv, shuffle=True, random_state=420)
@@ -134,5 +178,6 @@ trainer = ClassicalTrainer("svm", {'kernels':['rbf'], 'gammas':['auto'], 'Cs':[0
 trainer.compute_best_params(X, y, 5)
 print(trainer.best_accuracy)
 print(trainer.best_model)
+"""
 
 
