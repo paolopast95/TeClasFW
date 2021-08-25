@@ -1,4 +1,6 @@
 import os
+import warnings
+from pathlib import Path
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.svm import SVC
@@ -24,6 +26,7 @@ class ClassicalTrainer():
 
     def compute_best_params(self, X_train, y_train, validation_size):
         output_folder = os.path.join("../../output/", self.output_folder_name)
+        Path(output_folder).mkdir(parents=True, exist_ok=True)
         self.best_accuracy = 0
         X_tr, X_val, y_tr, y_val = train_test_split(X_train, y_train, test_size=validation_size)
         if self.model_name == "svm":
@@ -33,7 +36,7 @@ class ClassicalTrainer():
             degrees = self.params_dict['degrees']
             results = pd.DataFrame(columns=["Kernel", "Gamma", "C", "Degree", "Accuracy"])
             experiment_number = 0
-            for kernel, gamma, C, degree in tqdm(itertools.product(kernels, gammas, Cs, degrees)):
+            for kernel, gamma, C, degree in itertools.product(kernels, gammas, Cs, degrees):
                 print("Training and validation of SVM with the following parameters")
                 print("Kernel: " + str(kernel))
                 print("Gamma: " + str(gamma))
@@ -48,9 +51,9 @@ class ClassicalTrainer():
                     self.best_accuracy = current_accuracy
                 print("Accuracy: " + str(current_accuracy))
                 print("-------------------------------------------------------------------------")
-                results.iloc[0] = [kernel, gamma, C, degree, current_accuracy]
+                results.loc[experiment_number] = [kernel, gamma, C, degree, current_accuracy]
                 experiment_number += 1
-            results.to_csv(os.path.join(output_folder, "svm.csv"))
+            results.to_csv(os.path.join(output_folder, "svm.csv"), sep="\t", index=False)
         elif self.model_name == "naive_bayes":
             current_nb = MultinomialNB()
             current_nb.fit(X_tr,y_tr)
@@ -82,8 +85,9 @@ class ClassicalTrainer():
                     self.best_accuracy = current_accuracy
                 print("Accuracy: " + str(current_accuracy))
                 print("-------------------------------------------------------------------------")
-                results.iloc[experiment_number] = [criterion, splitter, max_depth, min_samples_split, min_samples_leaf, current_accuracy]
-            results.to_csv(os.path.join(output_folder, "decisionTree.csv"))
+                results.loc[experiment_number] = [criterion, splitter, max_depth, min_samples_split, min_samples_leaf, current_accuracy]
+                experiment_number += 1
+            results.to_csv(os.path.join(output_folder, "decisionTree.csv"), sep="\t", index=False)
         self.best_model.fit(X_train, y_train)
 
 
