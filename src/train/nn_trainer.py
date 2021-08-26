@@ -104,12 +104,13 @@ class NNTrainer:
                 y_pred = [np.argmax(el) for el in cnn.predict(padded)]
                 print(y_pred)
                 print(encoded_Y)
-                print("Test Accuracy: " + str(accuracy_score(encoded_Y, y_pred)))
+                current_accuracy = accuracy_score(encoded_Y, y_pred)
+                print("Test Accuracy: " + str(current_accuracy))
                 print("-------------------------------------------------------------------------")
 
                 results.loc[experiment_number] = [ncl, ncc, df, ndl, ndn, opt, lr, ep, history.history['loss'][-1], history.history['val_loss'][-1], history.history['accuracy'][-1], history.history["val_accuracy"][-1]]
-                if history.history['val_accuracy'] > best_accuracy:
-                    best_accuracy = history.history['val_accuracy']
+                if current_accuracy > best_accuracy:
+                    best_accuracy = current_accuracy
                     best_model = cnn
                 experiment_number += 1
             results.to_csv(os.path.join(output_folder, "cnn.csv"))
