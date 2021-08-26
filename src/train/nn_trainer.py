@@ -18,7 +18,6 @@ from src.models.rnn import CustomizedRNN
 from src.models.cnn import CustomizedCNN
 
 from tensorflow.keras.optimizers import Adadelta, Adagrad, Adam, Adamax, Ftrl, Nadam, RMSprop, SGD
-from tensorflow.keras.models import load_model
 
 tf.random.set_seed(42)
 
