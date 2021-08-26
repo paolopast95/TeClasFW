@@ -84,7 +84,7 @@ class NNTrainer:
             num_dense_neurons = self.params_dict['num_dense_neurons']
             results = pd.DataFrame(columns=["NumConvLayers", "NumFilters", "KernelDimensions", "NumDenseLayers", "NumDenseNeurons", "Optimizer", "LearningRate", "Epochs", "Loss", "ValidationLoss", self.metric.title(), "Validation"+self.metric.title()])
             for ncl, ncc, df, p, ndl, ndn, opt, lr, ep in itertools.product(num_conv_layers, num_conv_cells, dim_filters,pooling,num_dense_layers, num_dense_neurons, optimizers, learning_rates, epochs):
-                print("Training and validation of "+self.model_name.upper()+" with the following parameters")
+                print("Training and validation of "+self.model_name.upper()+" with the following parameters with early stopping")
                 print("Number of Convolutional Layers: " + str(ncl))
                 print("Number of Filters per Layer: " + str(ncc))
                 print("Kernel Size per Layer: " + str(df))
@@ -102,8 +102,6 @@ class NNTrainer:
                 history = cnn.fit(padded, dummy_y, validation_split=validation_size, epochs=ep, callbacks=[early_stopping, mcp_save])
                 cnn.load_weights("../../temp_models/.mdl_wts.hdf5")
                 y_pred = [np.argmax(el) for el in cnn.predict(padded)]
-                print(y_pred)
-                print(encoded_Y)
                 current_accuracy = accuracy_score(encoded_Y, y_pred)
                 print("Test Accuracy: " + str(current_accuracy))
                 print("-------------------------------------------------------------------------")
@@ -145,19 +143,27 @@ class NNTrainer:
                                            num_dense_layers=ndl, num_dense_neurons=ndn, is_bidirectional=bi, pretrained_embeddings=embedding_matrix)
                 model.compile(loss=loss, optimizer=optimizers_dict[opt](learning_rate=lr), metrics=[self.metric])
                 history = model.fit(padded, y_train, validation_split=validation_size, epochs=10, verbose=0)
-                print("Validation Accuracy: " + str(history.history["val_" + self.metric][epochs - 1]))
+                early_stopping = EarlyStopping(monitor='val_accuracy', patience=3, verbose=0, mode='max')
+                mcp_save = ModelCheckpoint('../../temp_models/.mdl_wts.hdf5', save_best_only=True,
+                                           monitor='val_accuracy', mode='max')
+                history = model.fit(padded, dummy_y, validation_split=validation_size, epochs=ep,
+                                  callbacks=[early_stopping, mcp_save])
+                model.load_weights("../../temp_models/.mdl_wts.hdf5")
+                y_pred = [np.argmax(el) for el in model.predict(padded)]
+                current_accuracy = accuracy_score(encoded_Y, y_pred)
+                print("Test Accuracy: " + str(current_accuracy))
                 print("-------------------------------------------------------------------------")
-                results.iloc[experiment_number] = [nhl, nru, ndl, ndn, bi, opt, lr, ep,
+                results.loc[experiment_number] = [nhl, nru, ndl, ndn, bi, opt, lr, ep,
                                                    history.history['loss'][epochs - 1],
                                                    history.history['val_loss'][epochs - 1],
                                                    history.history[self.metric][epochs - 1],
                                                    history.history["val_" + self.metric][epochs - 1]]
-                if history.history['val_' + self.metric] > best_accuracy:
-                    best_accuracy = history.history['val_' + self.metric]
+                if current_accuracy > best_accuracy:
+                    best_accuracy = current_accuracy
                     best_model = model
                 experiment_number += 1
+                experiment_number += 1
             results.to_csv(os.path.join(output_folder, self.model_name+".csv"))
-        print(history.history["val_accuracy"][9])
 
 
 
