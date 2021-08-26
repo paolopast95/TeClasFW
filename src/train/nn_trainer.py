@@ -7,12 +7,20 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 import gensim.downloader as gensim_api
+from sklearn.metrics import accuracy_score
+from sklearn.preprocessing import LabelEncoder
+from tensorflow.python.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
+from tensorflow.python.keras.utils import np_utils
+
 from src.models.gru import CustomizedGRU
 from src.models.lstm import CustomizedLSTM
 from src.models.rnn import CustomizedRNN
 from src.models.cnn import CustomizedCNN
 
 from tensorflow.keras.optimizers import Adadelta, Adagrad, Adam, Adamax, Ftrl, Nadam, RMSprop, SGD
+from tensorflow.keras.models import load_model
+
+tf.random.set_seed(42)
 
 optimizers_dict = {
     "adadelta": Adadelta,
@@ -32,6 +40,11 @@ class NNTrainer:
         self.metric = metric
 
     def compute_best_params(self, X_train, y_train, validation_size):
+        encoder = LabelEncoder()
+        encoder.fit(y_train)
+        encoded_Y = encoder.transform(y_train)
+        dummy_y = np_utils.to_categorical(encoded_Y)
+        print(dummy_y)
         output_folder = os.path.join("../../output/", self.output_folder_name)
         Path(output_folder).mkdir(parents=True, exist_ok=True)
         best_accuracy = 0
@@ -82,14 +95,21 @@ class NNTrainer:
                 print("Epochs: " + str(ep))
                 print("Loss Function: " + str(loss))
 
-                cnn = CustomizedCNN(num_classes=1, num_conv_layers=ncl, num_conv_cells=ncc, dim_filter=df, pooling=p, num_dense_layers=ndl, num_dense_neurons=ndn, pretrained_embeddings=embedding_matrix, vocab_size=vocab_size)
+                cnn = CustomizedCNN(num_classes=dummy_y.shape[1], num_conv_layers=ncl, num_conv_cells=ncc, dim_filter=df, pooling=p, num_dense_layers=ndl, num_dense_neurons=ndn, pretrained_embeddings=embedding_matrix, vocab_size=vocab_size)
                 cnn.compile(loss=loss, optimizer=optimizers_dict[opt](learning_rate=lr), metrics=[self.metric])
-                history = cnn.fit(padded, y_train, validation_split=validation_size, epochs=ep, verbose=0)
-                print("Validation Accuracy: " + str(history.history["val_"+self.metric][epochs-1]))
+                early_stopping = EarlyStopping(monitor='val_accuracy', patience=3, verbose=0, mode='max')
+                mcp_save = ModelCheckpoint('../../temp_models/.mdl_wts.hdf5', save_best_only=True, monitor='val_accuracy', mode='max')
+                history = cnn.fit(padded, dummy_y, validation_split=validation_size, epochs=ep, callbacks=[early_stopping, mcp_save])
+                cnn.load_weights("../../temp_models/.mdl_wts.hdf5")
+                y_pred = [np.argmax(el) for el in cnn.predict(padded)]
+                print(y_pred)
+                print(encoded_Y)
+                print("Test Accuracy: " + str(accuracy_score(encoded_Y, y_pred)))
                 print("-------------------------------------------------------------------------")
-                results.iloc[experiment_number] = [ncl, ncc, df, ndl, ndn, opt, lr, ep, history.history['loss'][epochs-1], history.history['val_loss'][epochs-1], history.history[self.metric][epochs-1], history.history["val_"+self.metric][epochs-1]]
-                if history.history['val_'+self.metric] > best_accuracy:
-                    best_accuracy = history.history['val_'+self.metric]
+
+                results.loc[experiment_number] = [ncl, ncc, df, ndl, ndn, opt, lr, ep, history.history['loss'][-1], history.history['val_loss'][-1], history.history['accuracy'][-1], history.history["val_accuracy"][-1]]
+                if history.history['val_accuracy'] > best_accuracy:
+                    best_accuracy = history.history['val_accuracy']
                     best_model = cnn
                 experiment_number += 1
             results.to_csv(os.path.join(output_folder, "cnn.csv"))

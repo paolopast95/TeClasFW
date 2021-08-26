@@ -1,6 +1,6 @@
 experiment:
-  dataset_filename: "clickbait_data.csv"
-  output_folder_name: "clickbait_nn"
+  dataset_filename: "news_category.csv"
+  output_folder_name: "news_category"
   preprocessing:
     tokenization: "wordpunct"
     stemming: "wordnet"
@@ -19,7 +19,7 @@ experiment:
         optimizers: [adam, adagrad, sgd]
         epochs: [10, 20, 30]
         learning_rates: [0.001, 0.01, 0.1]
-        loss: binary_crossentropy
+        loss: categorical_crossentropy
   evaluation:
     #k_fold:
     #k: 5

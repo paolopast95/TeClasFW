@@ -15,7 +15,6 @@ from src.train.classical_trainer import ClassicalTrainer
 def run_classical_algorithms(config_filename):
     with open(os.path.join("../../config_files", config_filename), "r") as f:
         config = yaml.safe_load(f)['experiment']
-    print(config)
     dataset_filename = config['dataset_filename']
     output_folder_name = config['output_folder_name']
     tokenization = config['preprocessing']["tokenization"]
