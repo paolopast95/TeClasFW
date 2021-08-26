@@ -6,18 +6,17 @@ import os
 import numpy as np
 
 class Vectorizer():
-    def __init__(self, operation_type="count", embedding_filename=None, max_features=5000):
+    def __init__(self, operation_type="count", embedding_filename=None):
         self.operation_type = operation_type
         self.embedding_filename = embedding_filename
-        self.max_features = max_features
 
     def fit(self, X):
         X_str = [" ".join(sent) for sent in X]
         if self.operation_type=="count":
-            vectorizer = CountVectorizer(max_features=self.max_features)
+            vectorizer = CountVectorizer()
             X_vect = vectorizer.fit_transform(X_str)
         elif self.operation_type == "tfidf":
-            vectorizer = TfidfVectorizer(max_features=self.max_features)
+            vectorizer = TfidfVectorizer()
             X_vect = vectorizer.fit_transform(X_str)
         elif self.operation_type == "word2vec":
             if os.path.exists(os.path.join("../../embeddings/",self.embedding_filename)):

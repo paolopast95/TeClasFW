@@ -28,7 +28,7 @@ class ClassicalTrainer():
         output_folder = os.path.join("../../output/", self.output_folder_name)
         Path(output_folder).mkdir(parents=True, exist_ok=True)
         self.best_accuracy = 0
-        X_tr, X_val, y_tr, y_val = train_test_split(X_train, y_train, test_size=validation_size)
+        X_tr, X_val, y_tr, y_val = train_test_split(X_train, y_train, test_size=validation_size, random_state=42)
         if self.model_name == "svm":
             kernels = self.params_dict['kernels']
             gammas = self.params_dict['gammas']
@@ -49,7 +49,7 @@ class ClassicalTrainer():
                 if current_accuracy > self.best_accuracy:
                     self.best_model = current_svm
                     self.best_accuracy = current_accuracy
-                print("Accuracy: " + str(current_accuracy))
+                print("Validation Accuracy: " + str(current_accuracy))
                 print("-------------------------------------------------------------------------")
                 results.loc[experiment_number] = [kernel, gamma, C, degree, current_accuracy]
                 experiment_number += 1

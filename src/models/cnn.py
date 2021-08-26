@@ -30,7 +30,6 @@ class CustomizedCNN(Model):
 
     def call(self, inputs):
         x = self.embedding(inputs)
-        print(x.shape)
         for cnn, pooling in zip(self.cnns, self.maxpoolings):
             x = cnn(x)
             x = pooling(x)

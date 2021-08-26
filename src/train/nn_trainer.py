@@ -14,7 +14,7 @@ from src.models.cnn import CustomizedCNN
 
 from tensorflow.keras.optimizers import Adadelta, Adagrad, Adam, Adamax, Ftrl, Nadam, RMSprop, SGD
 
-optimizers = {
+optimizers_dict = {
     "adadelta": Adadelta,
     "adagrad": Adagrad,
     "adam": Adam,
@@ -39,6 +39,7 @@ class NNTrainer:
         optimizers = self.params_dict['optimizers']
         epochs = self.params_dict['epochs']
         loss = self.params_dict['loss']
+        print(X_train[0])
         X_concat = [" ".join(sentence) for sentence in X_train]
         tokenizer = tf.keras.preprocessing.text.Tokenizer(oov_token="OOV")
         tokenizer.fit_on_texts(X_concat)
@@ -82,7 +83,7 @@ class NNTrainer:
                 print("Loss Function: " + str(loss))
 
                 cnn = CustomizedCNN(num_classes=1, num_conv_layers=ncl, num_conv_cells=ncc, dim_filter=df, pooling=p, num_dense_layers=ndl, num_dense_neurons=ndn, pretrained_embeddings=embedding_matrix, vocab_size=vocab_size)
-                cnn.compile(loss=loss, optimizer=optimizers[opt](learning_rate=lr), metrics=[self.metric])
+                cnn.compile(loss=loss, optimizer=optimizers_dict[opt](learning_rate=lr), metrics=[self.metric])
                 history = cnn.fit(padded, y_train, validation_split=validation_size, epochs=ep, verbose=0)
                 print("Validation Accuracy: " + str(history.history["val_"+self.metric][epochs-1]))
                 print("-------------------------------------------------------------------------")
@@ -121,7 +122,7 @@ class NNTrainer:
                 elif self.model_name == "gru":
                     model = CustomizedGRU(num_classes=1, num_hidden_layers=nhl, num_recurrent_units=nru,
                                            num_dense_layers=ndl, num_dense_neurons=ndn, is_bidirectional=bi, pretrained_embeddings=embedding_matrix)
-                model.compile(loss=loss, optimizer=optimizers[opt](learning_rate=lr), metrics=[self.metric])
+                model.compile(loss=loss, optimizer=optimizers_dict[opt](learning_rate=lr), metrics=[self.metric])
                 history = model.fit(padded, y_train, validation_split=validation_size, epochs=10, verbose=0)
                 print("Validation Accuracy: " + str(history.history["val_" + self.metric][epochs - 1]))
                 print("-------------------------------------------------------------------------")

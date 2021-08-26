@@ -1,18 +1,18 @@
-import pandas as pd
-import yaml
-import os
-import warnings
-
-from sklearn.model_selection import train_test_split
-
 from src.preprocessing.sentence_embedding import Vectorizer
 from src.preprocessing.stemming import Stemmer
 from src.preprocessing.stopword_removal import StopwordRemoval
 from src.preprocessing.tokenization import Tokenizer
 from src.train.classical_trainer import ClassicalTrainer
 
+import pandas as pd
+import yaml
+import os
+import warnings
 
-def run_classical_algorithms(config_filename):
+from src.train.nn_trainer import NNTrainer
+
+
+def run_dl_algorithms(config_filename):
     with open(os.path.join("../../config_files", config_filename), "r") as f:
         config = yaml.safe_load(f)['experiment']
     print(config)
@@ -37,15 +37,11 @@ def run_classical_algorithms(config_filename):
         X = stopword.fit(X)
     stemmer = Stemmer("english", stemming)
     X = stemmer.fit(X)
-    if config['preprocessing']['embedding_strategy'] == "word2vec":
-        vectorizer = Vectorizer("word2vec", embedding_file)
-    else:
-        vectorizer = Vectorizer(config["preprocessing"]['embedding_strategy'], embedding_file)
 
-    X = vectorizer.fit(X)
+    print(models)
     for model in models:
-        trainer = ClassicalTrainer(metric="accuracy", output_folder_name=output_folder_name, model_name=model['model_name'], params_dict=model['params'])
+        trainer = NNTrainer(metric="accuracy", output_folder_name=output_folder_name, model_name=model['model_name'], params_dict=model['params'])
         trainer.compute_best_params(X, y, validation_size=0.2)
 
-warnings.filterwarnings("ignore")
-run_classical_algorithms("classical_algorithms.yml")
+
+run_dl_algorithms("nn_algorithms.yml")

@@ -1,20 +1,21 @@
 experiment:
-  dataset_filename: "clickbait_data.csv"
-  output_folder_name: "clickbait"
+  dataset_filename: "news_category.csv"
+  output_folder_name: "news_category"
   preprocessing:
     tokenization: "wordpunct"
     stemming: "wordnet"
     stopword_removal: true
+    embedding_strategy: tfidf
     embedding_file: "word2vec-google-news-300"
   models:
     - model_name: svm
       params:
         kernels: [rbf, linear, poly]
         gammas: [auto]
-        Cs: [0.01, 0.1, 1, 10]
-        degrees: [2, 3, 4]
-    #- model_name: naive_bayes
-    #  params: null
+        Cs: [1, 10, 100, 500]
+        degrees: [2]
+    - model_name: naive_bayes
+      params: null
     - model_name: decision_tree
       params:
         criteria: [gini, entropy]
