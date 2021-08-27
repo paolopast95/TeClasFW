@@ -136,6 +136,7 @@ class NNTrainer:
             experiment_number = 0
             results = pd.DataFrame(columns=["NumRecLayers", "NumRecUnits", "NumDenseLayers", "NumDenseNeurons", "IsBidirectional", "Optimizer", "LearningRate", "Epochs", "Loss", "ValidationLoss"]+ self.metrics)
             for nhl, nru, ndl, ndn, bi, opt, lr, ep in itertools.product(num_hidden_layers, num_recurrent_units, num_dense_layers, num_dense_neurons, is_bidirectional, optimizers, learning_rates, epochs):
+                tf.keras.backend.clear_session()
                 print("Training and validation of " + self.model_name.upper() + " with the following parameters")
                 print("Number of Recurrent Layers: " + str(nhl))
                 print("Number of Recurrent Units per Layer: " + str(nru))

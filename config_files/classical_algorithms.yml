@@ -29,5 +29,3 @@ experiment:
       validation_split: 0.2
       focus_metric: accuracy
     metrics: [accuracy, precision, recall, f1score]
-  output:
-    output_filename: results.txt
