@@ -23,7 +23,7 @@ class CustomizedGRU(Model):
             self.grus.append(GRU(num_recurrent_units[num_hidden_layers-1], activation="relu", return_sequences=False))
         for i in range(num_dense_layers):
             self.denses.append(tf.keras.layers.Dense(num_dense_neurons[i], activation="relu"))
-        self.classification_layer = tf.keras.layers.Dense(num_classes, activation="sigmoid")
+        self.classification_layer = tf.keras.layers.Dense(num_classes, activation="softmax")
 
     def call(self, inputs):
         x = self.embedding(inputs)
