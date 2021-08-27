@@ -1,6 +1,7 @@
 experiment:
-  dataset_filename: "news_category.csv"
-  output_folder_name: "news_category"
+  dataset_filename: "clickbait_data.csv"
+  output_folder_name: "clickbait"
+  max_sentence_length: 30
   preprocessing:
     tokenization: "wordpunct"
     stemming: "wordnet"
@@ -30,17 +31,7 @@ experiment:
         epochs: [ 10, 20, 30 ]
         learning_rates: [ 0.001, 0.01, 0.1 ]
         loss: categorical_crossentropy
-    - model_name: lstm
-      params:
-        num_hidden_layers: [ 1,2,3 ]
-        num_recurrent_units: [ [ 128 ],[ 128,256 ],[ 128,256,128 ] ]
-        num_dense_layers: [ 1,2,3 ]
-        num_dense_neurons: [ [ 32 ],[ 64,32 ],[ 128,64,32 ] ]
-        is_bidirectional: [[true],[true,true],[true,true,true]]
-        optimizers: [ adam, adagrad, sgd ]
-        epochs: [ 10, 20, 30 ]
-        learning_rates: [ 0.001, 0.01, 0.1 ]
-        loss: categorical_crossentropy
+        pretrained_embeddings_path: word2vec-google-news-300
     - model_name: gru
       params:
         num_hidden_layers: [ 1,2,3 ]

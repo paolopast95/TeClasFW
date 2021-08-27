@@ -27,6 +27,7 @@ def run_dl_algorithms(config_filename):
     stopword_removal = config['preprocessing']["stopword_removal"]
     validation_size = config['evaluation']['validation_set']['validation_size']
     test_size = config['evaluation']['validation_set']['test_size']
+    max_sentence_length = config['max_sentence_length']
     metrics = config['evaluation']['metrics']
     models = config['models']
     dataset = pd.read_csv(os.path.join("../../data", dataset_filename), header=None, sep="\t")
@@ -50,7 +51,7 @@ def run_dl_algorithms(config_filename):
 
     for model in models:
         trainer = NNTrainer(metrics=metrics, output_folder_name=output_folder_name, model_name=model['model_name'], params_dict=model['params'])
-        trainer.compute_best_params(X_train, y_train, X_test, y_test, validation_size=validation_size)
+        trainer.compute_best_params(X_train, y_train, X_test, y_test, validation_size=validation_size, max_sentence_length=max_sentence_length)
 
 
 run_dl_algorithms("nn_algorithms.yml")

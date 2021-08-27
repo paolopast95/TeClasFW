@@ -7,8 +7,8 @@ class CustomizedRNN(Model):
         super(CustomizedRNN, self).__init__()
         self.rnns = []
         self.denses = []
-        if pretrained_embeddings:
-            self.embedding = tf.keras.layers.Embedding(vocab_size, pretrained_embeddings.shape(0),
+        if not pretrained_embeddings is None:
+            self.embedding = tf.keras.layers.Embedding(vocab_size, pretrained_embeddings.shape[1],
                                                        embeddings_initializer=tf.keras.initializers.Constant(pretrained_embeddings),
                                                        trainable=False)
         else:

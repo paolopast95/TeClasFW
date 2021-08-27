@@ -43,7 +43,7 @@ def run_classical_algorithms(config_filename):
 
     X = vectorizer.fit(X)
     for model in models:
-        trainer = ClassicalTrainer(metric="accuracy", output_folder_name=output_folder_name, model_name=model['model_name'], params_dict=model['params'])
+        trainer = ClassicalTrainer(metrics=config['evaluation']['metrics'], output_folder_name=output_folder_name, model_name=model['model_name'], params_dict=model['params'])
         trainer.compute_best_params(X, y, validation_size=0.2)
 
 warnings.filterwarnings("ignore")

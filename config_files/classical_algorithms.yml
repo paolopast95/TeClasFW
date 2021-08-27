@@ -24,9 +24,6 @@ experiment:
         min_samples_splits: [2,3,4]
         min_samples_leaves: [10, 100, 200]
   evaluation:
-    #k_fold:
-      #k: 5
-      #focus_metric: accuracy
     validation_set:
       test_size: 0.2
       validation_split: 0.2

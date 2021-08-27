@@ -2,13 +2,14 @@ import os
 import warnings
 from pathlib import Path
 
+import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.naive_bayes import MultinomialNB
 import itertools
 from sklearn.model_selection import train_test_split, StratifiedKFold
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 import pandas as pd
 from src.preprocessing.stemming import Stemmer
 from src.preprocessing.tokenization import Tokenizer
@@ -17,24 +18,23 @@ from src.preprocessing.sentence_embedding import Vectorizer
 from tqdm import tqdm
 
 class ClassicalTrainer():
-    def __init__(self, output_folder_name, model_name, params_dict, metric):
+    def __init__(self, output_folder_name, model_name, params_dict, metrics):
         self.output_folder_name = output_folder_name
         self.model_name = model_name
         self.params_dict = params_dict
-        self.metric = metric
+        self.metrics = metrics
 
 
-    def compute_best_params(self, X_train, y_train, validation_size):
+    def compute_best_params(self, X_train, y_train, X_test, y_test):
         output_folder = os.path.join("../../output/", self.output_folder_name)
         Path(output_folder).mkdir(parents=True, exist_ok=True)
         self.best_accuracy = 0
-        X_tr, X_val, y_tr, y_val = train_test_split(X_train, y_train, test_size=validation_size, random_state=42)
         if self.model_name == "svm":
             kernels = self.params_dict['kernels']
             gammas = self.params_dict['gammas']
             Cs = self.params_dict['Cs']
             degrees = self.params_dict['degrees']
-            results = pd.DataFrame(columns=["Kernel", "Gamma", "C", "Degree", "Accuracy"])
+            results = pd.DataFrame(columns=["Kernel", "Gamma", "C", "Degree"]+self.metrics)
             experiment_number = 0
             for kernel, gamma, C, degree in itertools.product(kernels, gammas, Cs, degrees):
                 print("Training and validation of SVM with the following parameters")
@@ -43,15 +43,24 @@ class ClassicalTrainer():
                 print("C: " + str(C))
                 print("Degree: " + str(degree))
                 current_svm = SVC(kernel=kernel, gamma=gamma, C=C, degree=degree)
-                current_svm.fit(X_tr, y_tr)
-                y_pred = current_svm.predict(X_val)
-                current_accuracy = accuracy_score(y_val, y_pred)
-                if current_accuracy > self.best_accuracy:
-                    self.best_model = current_svm
-                    self.best_accuracy = current_accuracy
-                print("Validation Accuracy: " + str(current_accuracy))
+                current_svm.fit(X_train, y_train)
+                y_pred = current_svm.predict(X_test)
+                current_experiment_results = [kernel, gamma, C, degree]
+                for metric in self.metrics:
+                    if metric == "precision":
+                        current_metric_value = precision_score(y_test, y_pred, average="macro")
+                        print("Test Precision Score: " + str(current_metric_value))
+                    elif metric == "recall":
+                        current_metric_value = recall_score(y_test, y_pred, average="macro")
+                        print("Test Recall Score: " + str(current_metric_value))
+                    elif metric == "f1":
+                        current_metric_value = f1_score(y_test, y_pred, average="macro")
+                        print("Test F1 Score: " + str(current_metric_value))
+                    else:
+                        current_metric_value = accuracy_score(y_test, y_pred)
+                        print("Test Accuracy Score: " + str(current_metric_value))
+                    current_experiment_results.append(current_metric_value)
                 print("-------------------------------------------------------------------------")
-                results.loc[experiment_number] = [kernel, gamma, C, degree, current_accuracy]
                 experiment_number += 1
             results.to_csv(os.path.join(output_folder, "svm.csv"), sep="\t", index=False)
         elif self.model_name == "naive_bayes":

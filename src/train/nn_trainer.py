@@ -45,7 +45,7 @@ class NNTrainer:
         self.params_dict = params_dict
         self.metrics = metrics
 
-    def compute_best_params(self, X_train, y_train, X_test, y_test, validation_size):
+    def compute_best_params(self, X_train, y_train, X_test, y_test, validation_size, max_sentence_length):
         output_folder = os.path.join("../../output/", self.output_folder_name)
         Path(output_folder).mkdir(parents=True, exist_ok=True)
         best_accuracy = 0
@@ -60,8 +60,8 @@ class NNTrainer:
         vocab_size = len(tokenizer.word_index) + 1
         sequences_train = tokenizer.texts_to_sequences(X_concat_train)
         sequences_test = tokenizer.texts_to_sequences(X_concat_test)
-        padded_train = tf.keras.preprocessing.sequence.pad_sequences(sequences_train, maxlen=30, padding='post', truncating='post')
-        padded_test = tf.keras.preprocessing.sequence.pad_sequences(sequences_test, maxlen=30, padding='post',
+        padded_train = tf.keras.preprocessing.sequence.pad_sequences(sequences_train, maxlen=max_sentence_length, padding='post', truncating='post')
+        padded_test = tf.keras.preprocessing.sequence.pad_sequences(sequences_test, maxlen=max_sentence_length, padding='post',
                                                                truncating='post')
         if "pretrained_embeddings_path" in self.params_dict:
             if os.path.exists(os.path.join("../../embeddings/", self.params_dict['pretrained_embeddings_path'])):
@@ -157,7 +157,6 @@ class NNTrainer:
                     model = CustomizedGRU(num_classes=y_train.shape[1], num_hidden_layers=nhl, num_recurrent_units=nru,
                                            num_dense_layers=ndl, num_dense_neurons=ndn, is_bidirectional=bi, pretrained_embeddings=embedding_matrix,  vocab_size=vocab_size)
                 model.compile(loss=loss, optimizer=optimizers_dict[opt](learning_rate=lr), metrics=['accuracy'])
-                history = model.fit(padded_train, y_train, validation_split=validation_size, epochs=10)
                 early_stopping = EarlyStopping(monitor='val_accuracy', patience=5, verbose=0, mode='max')
                 mcp_save = ModelCheckpoint('../../temp_models/.mdl_wts.hdf5', save_best_only=True,
                                            monitor='val_accuracy', mode='max')
