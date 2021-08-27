@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 import gensim.downloader as gensim_api
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from sklearn.preprocessing import LabelEncoder
 from tensorflow.python.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 from tensorflow.python.keras.utils import np_utils
@@ -31,19 +31,21 @@ optimizers_dict = {
     "rmsprop": RMSprop,
     "sgd": SGD
 }
+
+metrics_dict = {
+    "accuracy": accuracy_score,
+    "precision": precision_score,
+    "recall": recall_score,
+    "f1": f1_score
+}
 class NNTrainer:
-    def __init__(self, output_folder_name, model_name, params_dict, metric):
+    def __init__(self, output_folder_name, model_name, params_dict, metrics):
         self.output_folder_name = output_folder_name
         self.model_name = model_name
         self.params_dict = params_dict
-        self.metric = metric
+        self.metrics = metrics
 
-    def compute_best_params(self, X_train, y_train, validation_size):
-        encoder = LabelEncoder()
-        encoder.fit(y_train)
-        encoded_Y = encoder.transform(y_train)
-        dummy_y = np_utils.to_categorical(encoded_Y)
-        print(dummy_y)
+    def compute_best_params(self, X_train, y_train, X_test, y_test, validation_size):
         output_folder = os.path.join("../../output/", self.output_folder_name)
         Path(output_folder).mkdir(parents=True, exist_ok=True)
         best_accuracy = 0
@@ -51,13 +53,16 @@ class NNTrainer:
         optimizers = self.params_dict['optimizers']
         epochs = self.params_dict['epochs']
         loss = self.params_dict['loss']
-        print(X_train[0])
-        X_concat = [" ".join(sentence) for sentence in X_train]
+        X_concat_train = [" ".join(sentence) for sentence in X_train]
+        X_concat_test = [" ".join(sentence) for sentence in X_test]
         tokenizer = tf.keras.preprocessing.text.Tokenizer(oov_token="OOV")
-        tokenizer.fit_on_texts(X_concat)
+        tokenizer.fit_on_texts(X_concat_train)
         vocab_size = len(tokenizer.word_index) + 1
-        sequences = tokenizer.texts_to_sequences(X_concat)
-        padded = tf.keras.preprocessing.sequence.pad_sequences(sequences, maxlen=30, padding='post', truncating='post')
+        sequences_train = tokenizer.texts_to_sequences(X_concat_train)
+        sequences_test = tokenizer.texts_to_sequences(X_concat_test)
+        padded_train = tf.keras.preprocessing.sequence.pad_sequences(sequences_train, maxlen=30, padding='post', truncating='post')
+        padded_test = tf.keras.preprocessing.sequence.pad_sequences(sequences_test, maxlen=30, padding='post',
+                                                               truncating='post')
         if "pretrained_embeddings_path" in self.params_dict:
             if os.path.exists(os.path.join("../../embeddings/", self.params_dict['pretrained_embeddings_path'])):
                 with open(os.path.join("../../embeddings", self.params_dict['pretrained_embeddings_path']),"rb") as f:
@@ -81,7 +86,7 @@ class NNTrainer:
             pooling = (self.params_dict['pooling'])
             num_dense_layers = self.params_dict['num_dense_layers']
             num_dense_neurons = self.params_dict['num_dense_neurons']
-            results = pd.DataFrame(columns=["NumConvLayers", "NumFilters", "KernelDimensions", "NumDenseLayers", "NumDenseNeurons", "Optimizer", "LearningRate", "Epochs", "Loss", "ValidationLoss", self.metric.title(), "Validation"+self.metric.title()])
+            results = pd.DataFrame(columns=["NumConvLayers", "NumFilters", "KernelDimensions", "NumDenseLayers", "NumDenseNeurons", "Optimizer", "LearningRate", "Epochs", "Loss", "ValidationLoss"] + self.metrics)
             for ncl, ncc, df, p, ndl, ndn, opt, lr, ep in itertools.product(num_conv_layers, num_conv_cells, dim_filters,pooling,num_dense_layers, num_dense_neurons, optimizers, learning_rates, epochs):
                 print("Training and validation of "+self.model_name.upper()+" with the following parameters with early stopping")
                 print("Number of Convolutional Layers: " + str(ncl))
@@ -94,21 +99,31 @@ class NNTrainer:
                 print("Epochs: " + str(ep))
                 print("Loss Function: " + str(loss))
 
-                cnn = CustomizedCNN(num_classes=dummy_y.shape[1], num_conv_layers=ncl, num_conv_cells=ncc, dim_filter=df, pooling=p, num_dense_layers=ndl, num_dense_neurons=ndn, pretrained_embeddings=embedding_matrix, vocab_size=vocab_size)
-                cnn.compile(loss=loss, optimizer=optimizers_dict[opt](learning_rate=lr), metrics=[self.metric])
-                early_stopping = EarlyStopping(monitor='val_accuracy', patience=3, verbose=0, mode='max')
+                cnn = CustomizedCNN(num_classes=y_train.shape[1], num_conv_layers=ncl, num_conv_cells=ncc, dim_filter=df, pooling=p, num_dense_layers=ndl, num_dense_neurons=ndn, pretrained_embeddings=embedding_matrix, vocab_size=vocab_size)
+                cnn.compile(loss=loss, optimizer=optimizers_dict[opt](learning_rate=lr), metrics=["accuracy"])
+                early_stopping = EarlyStopping(monitor='val_accuracy', patience=5, verbose=0, mode='max')
                 mcp_save = ModelCheckpoint('../../temp_models/.mdl_wts.hdf5', save_best_only=True, monitor='val_accuracy', mode='max')
-                history = cnn.fit(padded, dummy_y, validation_split=validation_size, epochs=ep, callbacks=[early_stopping, mcp_save])
+                history = cnn.fit(padded_train, y_train, validation_split=validation_size, epochs=ep, callbacks=[early_stopping, mcp_save])
                 cnn.load_weights("../../temp_models/.mdl_wts.hdf5")
-                y_pred = [np.argmax(el) for el in cnn.predict(padded)]
-                current_accuracy = accuracy_score(encoded_Y, y_pred)
-                print("Test Accuracy: " + str(current_accuracy))
+                y_pred = [np.argmax(el) for el in cnn.predict(padded_test)]
+                current_experiment_results = [ncl, ncc, df, ndl, ndn, opt, lr, ep, history.history['loss'][-1], history.history['val_loss'][-1]]
+                for metric in self.metrics:
+                    if metric == "precision":
+                        current_metric_value = precision_score(np.argmax(y_test, axis=1),y_pred, average="macro")
+                        print("Test Precision Score: " + str(current_metric_value))
+                    elif metric == "recall":
+                        current_metric_value = recall_score(np.argmax(y_test, axis=1), y_pred, average="macro")
+                        print("Test Recall Score: " + str(current_metric_value))
+                    elif metric == "f1":
+                        current_metric_value = f1_score(np.argmax(y_test, axis=1), y_pred, average="macro")
+                        print("Test F1 Score: " + str(current_metric_value))
+                    else:
+                        current_metric_value = accuracy_score(np.argmax(y_test, axis=1), y_pred)
+                        print("Test Accuracy Score: " + str(current_metric_value))
+                    current_experiment_results.append(current_metric_value)
                 print("-------------------------------------------------------------------------")
 
-                results.loc[experiment_number] = [ncl, ncc, df, ndl, ndn, opt, lr, ep, history.history['loss'][-1], history.history['val_loss'][-1], history.history['accuracy'][-1], history.history["val_accuracy"][-1]]
-                if current_accuracy > best_accuracy:
-                    best_accuracy = current_accuracy
-                    best_model = cnn
+                results.loc[experiment_number] = current_experiment_results
                 experiment_number += 1
             results.to_csv(os.path.join(output_folder, "cnn.csv"))
 
@@ -119,7 +134,7 @@ class NNTrainer:
             num_dense_neurons = self.params_dict['num_dense_neurons']
             is_bidirectional = self.params_dict['is_bidirectional']
             experiment_number = 0
-            results = pd.DataFrame(columns=["NumRecLayers", "NumRecUnits", "NumDenseLayers", "NumDenseNeurons", "IsBidirectional", "Optimizer", "LearningRate", "Epochs", "Loss", "ValidationLoss", self.metric.title(), "Validation"+self.metric.title()])
+            results = pd.DataFrame(columns=["NumRecLayers", "NumRecUnits", "NumDenseLayers", "NumDenseNeurons", "IsBidirectional", "Optimizer", "LearningRate", "Epochs", "Loss", "ValidationLoss"]+ self.metrics)
             for nhl, nru, ndl, ndn, bi, opt, lr, ep in itertools.product(num_hidden_layers, num_recurrent_units, num_dense_layers, num_dense_neurons, is_bidirectional, optimizers, learning_rates, epochs):
                 print("Training and validation of " + self.model_name.upper() + " with the following parameters")
                 print("Number of Recurrent Layers: " + str(nhl))
@@ -131,36 +146,42 @@ class NNTrainer:
                 print("Learning Rate: " + str(lr))
                 print("Epochs: " + str(ep))
                 print("Loss Function: " + str(loss))
+                print(y_train.shape)
                 if self.model_name == "lstm":
-                    model = CustomizedLSTM(num_classes=1, num_hidden_layers=nhl, num_recurrent_units=nru,
-                                           num_dense_layers=ndl, num_dense_neurons=ndn, is_bidirectional=bi, pretrained_embeddings=embedding_matrix)
+                    model = CustomizedLSTM(num_classes=y_train.shape[1], num_hidden_layers=nhl, num_recurrent_units=nru,
+                                           num_dense_layers=ndl, num_dense_neurons=ndn, is_bidirectional=bi, pretrained_embeddings=embedding_matrix, vocab_size=vocab_size)
                 elif self.model_name == "rnn":
-                    model = CustomizedRNN(num_classes=1, num_hidden_layers=nhl, num_recurrent_units=nru,
-                                           num_dense_layers=ndl, num_dense_neurons=ndn, is_bidirectional=bi, pretrained_embeddings=embedding_matrix)
+                    model = CustomizedRNN(num_classes=y_train.shape[1], num_hidden_layers=nhl, num_recurrent_units=nru,
+                                           num_dense_layers=ndl, num_dense_neurons=ndn, is_bidirectional=bi, pretrained_embeddings=embedding_matrix, vocab_size=vocab_size)
                 elif self.model_name == "gru":
-                    model = CustomizedGRU(num_classes=1, num_hidden_layers=nhl, num_recurrent_units=nru,
-                                           num_dense_layers=ndl, num_dense_neurons=ndn, is_bidirectional=bi, pretrained_embeddings=embedding_matrix)
-                model.compile(loss=loss, optimizer=optimizers_dict[opt](learning_rate=lr), metrics=[self.metric])
-                history = model.fit(padded, y_train, validation_split=validation_size, epochs=10, verbose=0)
-                early_stopping = EarlyStopping(monitor='val_accuracy', patience=3, verbose=0, mode='max')
+                    model = CustomizedGRU(num_classes=y_train.shape[1], num_hidden_layers=nhl, num_recurrent_units=nru,
+                                           num_dense_layers=ndl, num_dense_neurons=ndn, is_bidirectional=bi, pretrained_embeddings=embedding_matrix,  vocab_size=vocab_size)
+                model.compile(loss=loss, optimizer=optimizers_dict[opt](learning_rate=lr), metrics=['accuracy'])
+                history = model.fit(padded_train, y_train, validation_split=validation_size, epochs=10)
+                early_stopping = EarlyStopping(monitor='val_accuracy', patience=5, verbose=0, mode='max')
                 mcp_save = ModelCheckpoint('../../temp_models/.mdl_wts.hdf5', save_best_only=True,
                                            monitor='val_accuracy', mode='max')
-                history = model.fit(padded, dummy_y, validation_split=validation_size, epochs=ep,
+                history = model.fit(padded_train, y_train, validation_split=validation_size, epochs=ep,
                                   callbacks=[early_stopping, mcp_save])
                 model.load_weights("../../temp_models/.mdl_wts.hdf5")
-                y_pred = [np.argmax(el) for el in model.predict(padded)]
-                current_accuracy = accuracy_score(encoded_Y, y_pred)
-                print("Test Accuracy: " + str(current_accuracy))
+                y_pred = [np.argmax(el) for el in model.predict(padded_test)]
+                current_experiment_results = [nhl, nru, ndl, ndn, bi, opt, lr, ep, history.history['loss'][-1],
+                                              history.history['val_loss'][-1]]
+                for metric in self.metrics:
+                    if metric == "precision":
+                        current_metric_value = precision_score(np.argmax(y_test, axis=1), y_pred, average="macro")
+                        print("Test Precision Score: " + str(current_metric_value))
+                    elif metric == "recall":
+                        current_metric_value = recall_score(np.argmax(y_test, axis=1), y_pred, average="macro")
+                        print("Test Recall Score: " + str(current_metric_value))
+                    elif metric == "f1":
+                        current_metric_value = f1_score(np.argmax(y_test, axis=1), y_pred, average="macro")
+                        print("Test F1 Score: " + str(current_metric_value))
+                    else:
+                        current_metric_value = accuracy_score(np.argmax(y_test, axis=1), y_pred)
+                        print("Test Accuracy Score: " + str(current_metric_value))
+                    current_experiment_results.append(current_metric_value)
                 print("-------------------------------------------------------------------------")
-                results.loc[experiment_number] = [nhl, nru, ndl, ndn, bi, opt, lr, ep,
-                                                   history.history['loss'][epochs - 1],
-                                                   history.history['val_loss'][epochs - 1],
-                                                   history.history[self.metric][epochs - 1],
-                                                   history.history["val_" + self.metric][epochs - 1]]
-                if current_accuracy > best_accuracy:
-                    best_accuracy = current_accuracy
-                    best_model = model
-                experiment_number += 1
                 experiment_number += 1
             results.to_csv(os.path.join(output_folder, self.model_name+".csv"))
 

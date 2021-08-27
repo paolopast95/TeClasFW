@@ -1,3 +1,7 @@
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+from tensorflow.python.keras.utils import np_utils
+
 from src.preprocessing.sentence_embedding import Vectorizer
 from src.preprocessing.stemming import Stemmer
 from src.preprocessing.stopword_removal import StopwordRemoval
@@ -21,15 +25,13 @@ def run_dl_algorithms(config_filename):
     tokenization = config['preprocessing']["tokenization"]
     stemming = config['preprocessing']["stemming"]
     stopword_removal = config['preprocessing']["stopword_removal"]
-    if config['preprocessing']['embedding_strategy'] == "word2vec":
-        embedding_file = config['preprocessing']["embedding_file"]
-    else:
-        embedding_file = None
+    validation_size = config['evaluation']['validation_set']['validation_size']
+    test_size = config['evaluation']['validation_set']['test_size']
+    metrics = config['evaluation']['metrics']
     models = config['models']
     dataset = pd.read_csv(os.path.join("../../data", dataset_filename), header=None, sep="\t")
     X = dataset[0]
     y = dataset[1]
-    print(type(y[0]))
     tokenizer = Tokenizer(tokenization, True)
     X = tokenizer.fit(X)
     if stopword_removal:
@@ -37,11 +39,18 @@ def run_dl_algorithms(config_filename):
         X = stopword.fit(X)
     stemmer = Stemmer("english", stemming)
     X = stemmer.fit(X)
+    print(y.value_counts())
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, stratify=y)
+    encoder = LabelEncoder()
+    encoder.fit(y)
+    y_train = encoder.transform(y_train)
+    y_test = encoder.transform(y_test)
+    y_train = np_utils.to_categorical(y_train)
+    y_test = np_utils.to_categorical(y_test)
 
-    print(models)
     for model in models:
-        trainer = NNTrainer(metric="accuracy", output_folder_name=output_folder_name, model_name=model['model_name'], params_dict=model['params'])
-        trainer.compute_best_params(X, y, validation_size=0.2)
+        trainer = NNTrainer(metrics=metrics, output_folder_name=output_folder_name, model_name=model['model_name'], params_dict=model['params'])
+        trainer.compute_best_params(X_train, y_train, X_test, y_test, validation_size=validation_size)
 
 
 run_dl_algorithms("nn_algorithms.yml")
