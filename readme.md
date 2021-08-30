@@ -22,7 +22,7 @@ pip install -r requirements.txt
 ## Usage
 If you are interested in execute the classic algorithms like SVM, DecisionTrees or Naive Bayes, the script *classical_algorithms_pipeline.py* has to be executed.
 
-If you are interested in Deep Learning algorithms, you need to run the script *nn_algorithms_pipeline* 
+If you are interested in Deep Learning algorithms, you need to run the script *nn_algorithms_pipeline.py* 
 
 
 ## Configuration Files
