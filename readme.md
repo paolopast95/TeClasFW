@@ -1,14 +1,14 @@
 # TeClasFW
 
-TeClasFW (which stands for Text Classification Framework) is a framework that allows to train different machine learning models at once, using a configuration file in which all the details about the algorithms that will be tested. 
+TeClasFW (which stands for Text Classification Framework) is a framework that allows training different machine learning models at once, using a configuration file in which all the details about the algorithms should be defined. 
 
-This tool can be seen as a wrapper for the most populare libraries for NLP and allows the programmer not to worry about the implementation details.
+This tool can be seen as a wrapper for the most popular libraries for NLP and allows the programmer not to worry about the implementation details.
 
-TeClasFW allows also to define different combination of parameters for each algorithm, storing the results of each configuration on a file.
+TeClasFW allows also the definition of different combinations of parameters for each algorithm, storing the results of each configuration on a file.
 
 In other words, the user can run many experiments using a simple configuration file.
 
-Currently, there have been implemented different pre-processing operation and the most popular algorithms for text classification (Naive Bayes, SVM, LSTM, GRU, CNN etc.)
+There have been implemented different pre-processing operations and the most popular algorithms for text classification (Naive Bayes, SVM, LSTM, GRU, CNN, etc.)
 
 ## Installation
 
@@ -20,13 +20,13 @@ pip install -r requirements.txt
 ```
 
 ## Usage
-If you are interested in execute the classic algorithms like SVM, DecisionTrees or Naive Bayes, the script *classical_algorithms_pipeline.py* has to be executed.
+If you are interested in executing the classic algorithms like SVM, DecisionTrees, or Naive Bayes, the script *classical_algorithms_pipeline.py* has to be executed.
 
 If you are interested in Deep Learning algorithms, you need to run the script *nn_algorithms_pipeline.py* 
 
 
 ## Configuration Files
-For customize the training process and define the algorithms that should be executed (and all the parameters to be tested) the two configuration files in the *config_files* directory should be modified.
+To customize the training process and define the algorithms that should be executed (and all the parameters to test), the user should modify the two configuration files in the *config_files* directory.
 
 For instance, the configuration file for the standard algorithms (SVM or DecisionTree) is shown below
 ```yaml
@@ -69,7 +69,7 @@ In the preprocessing section you can define all the operation that should be exe
 - embedding_strategy: count, tfidf, word2vec (this field is needed in order to define how to convert the raw sentences into their numerical representation)
 - embedding_file: name_of_pretrained_embedding_file (you can use your own embedding file or put the name of one of the pretrained file inside the gensim library)
 
-For the models that need to be tested, you can define all the hyoer parameters defined in the sklearn library:
+For the models that need to be tested, you can define all the hyper parameters defined in the sklearn library:
 
 - kernels, gamma values, C values for the SVM
 - criterion, splitters, max_depths etc. for the DecisionTree
