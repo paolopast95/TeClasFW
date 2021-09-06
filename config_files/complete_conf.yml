@@ -1,0 +1,94 @@
+experiment:
+  dataset_filename: "news_category.csv"
+  output_folder_name: "news_category"
+  data_cleaning:
+    lowercase: true
+    unpack_hashtags: true
+    substitute_urls: "<URL>"
+    subtitute_citations: "<CIT>"
+    substitute_emoji: "<EMOJI>"
+    remove_numbers: true
+    remove_punctuation: true
+  preprocessing_classical_algorithms:
+    tokenization: "word"
+    stemming: null
+    stopword_removal: true
+    embedding_strategy: tfidf
+    embedding_file: "word2vec-google-news-300"
+  preprocessing_deeplearning_algorithms:
+    tokenization: "wordpunct"
+    stemming: "wordnet"
+    stopword_removal: true
+  preprocessing_bert:
+    bert_tokenizer_name: bert_large_uncased
+  models:
+    - model_name: svm
+      params:
+        kernels: [ rbf, linear, poly ]
+        gammas: [ auto ]
+        Cs: [ 1, 10, 100, 500 ]
+        degrees: [ 2 ]
+    - model_name: naive_bayes
+      params: null
+    - model_name: decision_tree
+      params:
+        criteria: [ gini, entropy ]
+        splitters: [ random, best ]
+        max_depths: [ 10,100,1000, 10000 ]
+        min_samples_splits: [ 2,3,4 ]
+        min_samples_leaves: [ 10, 100, 200 ]
+    - model_name: cnn
+      params:
+        pretrained_embeddings_path: "word2vec-google-news-300"
+        num_conv_layers: [1,2,3]
+        num_conv_cells: [[128],[256,128],[512,256,128]]
+        dim_filters: [[5],[5,25],[5,5,5]]
+        pooling: [[5],[5,5,5],[5,5,5]]
+        num_dense_layers: [1,2,3]
+        num_dense_neurons: [[32],[64,32],[128,64,32]]
+        optimizers: [adam, adagrad, sgd]
+        epochs: [10, 20, 30]
+        learning_rates: [0.001, 0.01, 0.1]
+        loss: categorical_crossentropy
+    - model_name: lstm
+      params:
+        num_hidden_layers: [ 1,2,3 ]
+        num_recurrent_units: [ [ 128 ],[ 128,256 ],[ 128,256,128 ] ]
+        num_dense_layers: [ 1,2,3 ]
+        num_dense_neurons: [ [ 32 ],[ 64,32 ],[ 128,64,32 ] ]
+        is_bidirectional: [ [ true ],[ true,true ],[ true,true,true ] ]
+        optimizers: [ adam, adagrad, sgd ]
+        epochs: [ 10, 20, 30 ]
+        learning_rates: [ 0.001, 0.01, 0.1 ]
+        loss: categorical_crossentropy
+        pretrained_embeddings_path: word2vec-google-news-300
+    - model_name: gru
+      params:
+        num_hidden_layers: [ 1,2,3 ]
+        num_recurrent_units: [ [ 128 ],[ 128,256 ],[ 128,256,128 ] ]
+        num_dense_layers: [ 1,2,3 ]
+        num_dense_neurons: [ [ 32 ],[ 64,32 ],[ 128,64,32 ] ]
+        is_bidirectional: [ [ true ],[ true,true ],[ true,true,true ] ]
+        optimizers: [ adam, adagrad, sgd ]
+        epochs: [ 10, 20, 30 ]
+        learning_rates: [ 0.001, 0.01, 0.1 ]
+        loss: categorical_crossentropy
+    - model_name: rnn
+      params:
+        num_hidden_layers: [ 1,2,3 ]
+        num_recurrent_units: [ [ 128 ],[ 128,256 ],[ 128,256,128 ] ]
+        num_dense_layers: [ 1,2,3 ]
+        num_dense_neurons: [ [ 32 ],[ 64,32 ],[ 128,64,32 ] ]
+        optimizers: [ adam, adagrad, sgd ]
+        epochs: [ 10, 20, 30 ]
+        learning_rates: [ 0.001, 0.01, 0.1 ]
+        loss: categorical_crossentropy
+    - model_name: bert
+      params:
+        pretrained_model_name: bert_base_uncased
+  evaluation:
+    validation_metric: accuracy
+    test_metrics: [ accuracy, precision, recall, f1 ]
+    validation_set:
+      test_size: 0.2
+      validation_size: 0.2
